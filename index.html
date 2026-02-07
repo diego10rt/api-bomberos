@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Monitor Central CBS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-main: #ffffff;
+            --highlight: #e74c3c; /* Rojo Bombero */
+            --verde-bombero: #2ecc71;
+            --naranja-bombero: #e67e22;
+        }
+
+        body { 
+            font-family: 'Roboto', sans-serif; 
+            background-color: var(--bg-color); 
+            color: var(--text-main); 
+            margin: 0; 
+            padding: 20px; 
+            box-sizing: border-box;
+        }
+
+        /* CABECERA */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #333;
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+        }
+
+        .titulo-principal {
+            font-size: 2em;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--highlight);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* PUNTO ROJO PARPADEANTE */
+        .live-indicator {
+            width: 15px;
+            height: 15px;
+            background-color: red;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 10px red;
+            animation: parpadear 1.5s infinite;
+        }
+
+        @keyframes parpadear {
+            0% { opacity: 1; }
+            50% { opacity: 0.3; }
+            100% { opacity: 1; }
+        }
+
+        .reloj {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: #ccc;
+        }
+
+        /* GRILLA DE TARJETAS */
+        .contenedor { 
+            display: grid;
+            /* Se ajusta automáticamente al ancho de la pantalla */
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px; 
+        }
+
+        .tarjeta {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #333;
+            transition: transform 0.2s;
+        }
+        
+        .tarjeta:hover {
+            transform: translateY(-5px);
+            border-color: #555;
+        }
+
+        .cabecera-tarjeta {
+            background-color: #2c3e50; 
+            padding: 10px; 
+            text-align: center; 
+            font-weight: bold; 
+            font-size: 1.1em;
+            border-bottom: 3px solid var(--highlight);
+        }
+
+        .cuerpo-tarjeta { 
+            padding: 10px; 
+            min-height: 60px; 
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        /* ESTILOS DE LOS CARROS */
+        .carro {
+            color: white; 
+            padding: 8px 12px; 
+            border-radius: 6px;
+            font-weight: bold; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        /* --- COLORES DE ESTADO --- */
+        .estado-verde { 
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); 
+        } 
+        
+        .estado-naranja { 
+            background: linear-gradient(135deg, #d35400 0%, #e67e22 100%); 
+        }
+
+        /* COLOR GRIS PARA OFFLINE/ERROR */
+        .estado-offline { 
+            background: #34495e; 
+            color: #bdc3c7; 
+            border: 1px solid #c0392b; 
+        }
+
+        .nombre-carro { font-size: 1.5em; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
+        .texto-estado { font-size: 0.65em; text-align: right; max-width: 100px; line-height: 1.1; opacity: 0.95; }
+
+        .sin-carros { 
+            color: #555; 
+            text-align: center; 
+            font-size: 0.9em; 
+            padding-top: 15px;
+            font-style: italic; 
+        }
+        
+        .loading { text-align: center; color: var(--naranja-bombero); grid-column: 1 / -1; margin-top: 50px; font-size: 1.5em;}
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="titulo-principal">
+            <span class="live-indicator"></span>
+            Central CBS
+        </div>
+        <div class="reloj" id="reloj">00:00:00</div>
+    </header>
+
+    <div id="pantalla" class="contenedor">
+        <div class="loading">Conectando con Servidor Cloud...</div>
+    </div>
+
+    <script>
+        // 1. RELOJ DIGITAL
+        function actualizarReloj() {
+            const ahora = new Date();
+            const horas = String(ahora.getHours()).padStart(2, '0');
+            const minutos = String(ahora.getMinutes()).padStart(2, '0');
+            const segundos = String(ahora.getSeconds()).padStart(2, '0');
+            document.getElementById('reloj').innerText = `${horas}:${minutos}:${segundos}`;
+        }
+        setInterval(actualizarReloj, 1000);
+        actualizarReloj();
+
+        // 2. CONEXIÓN A LA NUBE (RENDER)
+        async function actualizarDatos() {
+            try {
+                // Aquí está tu URL Real:
+                const respuesta = await fetch('https://monitoreo-central-cbs.onrender.com/api/carros');
+                const datos = await respuesta.json();
+
+                if (datos.length === 0) return;
+
+                const pantalla = document.getElementById('pantalla');
+                pantalla.innerHTML = ''; 
+
+                datos.forEach(cuartel => {
+                    let htmlCarros = '';
+                    
+                    if (cuartel.carros.length > 0) {
+                        cuartel.carros.forEach(carro => {
+                            let claseColor = 'estado-verde'; 
+                            
+                            // Lógica de colores inteligente
+                            if (carro.estado === 'EN LLAMADO') {
+                                claseColor = 'estado-naranja';
+                            } else if (carro.estado === 'OFFLINE' || carro.estado === 'SIN CONEXIÓN') {
+                                claseColor = 'estado-offline';
+                            }
+                            // "DISPONIBLE EN LLAMADO" se queda verde por defecto
+
+                            htmlCarros += `
+                                <div class="carro ${claseColor}">
+                                    <span class="nombre-carro">${carro.nombre}</span>
+                                    <span class="texto-estado">${carro.estado}</span>
+                                </div>`;
+                        });
+                    } else {
+                        htmlCarros = '<div class="sin-carros">Sin unidades</div>';
+                    }
+
+                    pantalla.innerHTML += `
+                        <div class="tarjeta">
+                            <div class="cabecera-tarjeta">${cuartel.nombre_cuartel}</div>
+                            <div class="cuerpo-tarjeta">${htmlCarros}</div>
+                        </div>
+                    `;
+                });
+
+            } catch (error) {
+                console.error("Esperando conexión...", error);
+            }
+        }
+
+        // Ejecutar al inicio y luego cada 5 segundos
+        actualizarDatos();
+        setInterval(actualizarDatos, 5000); 
+    </script>
+</body>
+</html>
