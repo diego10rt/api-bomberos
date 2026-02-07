@@ -44,24 +44,28 @@ def obtener_token_y_datos(cuartel):
         session = requests.Session()
         session.headers.update({'User-Agent': 'Mozilla/5.0'})
         response = session.get(cuartel['url'], timeout=10)
+        html = response.text
         
-        # 1. Buscar la URL secreta
-        match = re.search(r'var url="(https://icbs\.cl/cuartel/datos\.php\?id_proce=.*?&time=.*?&hash=.*?)"', response.text)
+        # --- MATEMÁTICAS: CONTAR VOLUNTARIOS ---
+        inputs_estados = re.findall(r'<input id="estado\d+" type="hidden" value="(\d+)"', html)
+        personal_count = inputs_estados.count('1')
+        personal_str = str(personal_count)
+        # ---------------------------------------
+
+        match = re.search(r'var url="(https://icbs\.cl/cuartel/datos\.php\?id_proce=.*?&time=.*?&hash=.*?)"', html)
         
+        carros_limpios = []
         if match:
             url_json = match.group(1)
             try:
-                # 2. Intentar leer el JSON
                 resp_json = session.get(url_json, timeout=10)
                 datos_raw = resp_json.json()
             except:
-                # ERROR CRÍTICO: El JSON vino roto (ej: la compañía 6 y 18)
                 return {
                     "nombre_cuartel": cuartel['nombre'], 
+                    "personal": personal_str,
                     "carros": [{"nombre": "SISTEMA", "estado": "OFFLINE"}]
                 }
-            
-            carros_limpios = []
             
             if 'carros' in datos_raw and datos_raw['carros']:
                 fuente = datos_raw['carros']
@@ -72,7 +76,6 @@ def obtener_token_y_datos(cuartel):
                         nombre = c.get('nombre', '??')
                         estado_raw = str(c.get('estado_nombre', '')).upper()
                         
-                        # Lógica de estados (La que ya funciona bien)
                         estado_final = "EN SERVICIO"
                         if "LLAMADO" in estado_raw:
                              if "DISPONIBLE" in estado_raw:
@@ -80,26 +83,26 @@ def obtener_token_y_datos(cuartel):
                              else:
                                  estado_final = "EN LLAMADO"
                         elif "FUERA" in estado_raw:
-                             continue # Ocultamos los fuera de servicio
+                             continue 
                         
                         carros_limpios.append({
                             "nombre": nombre,
                             "estado": estado_final
                         })
 
-            return {"nombre_cuartel": cuartel['nombre'], "carros": carros_limpios}
         else:
-            # ERROR: No encontramos la URL secreta
-            return {
-                "nombre_cuartel": cuartel['nombre'], 
-                "carros": [{"nombre": "SISTEMA", "estado": "OFFLINE"}]
-            }
-            
-    except Exception as e:
-        print(f"Error conexión {cuartel['nombre']}: {e}")
-        # ERROR: Falla de internet o tiempo de espera
+             carros_limpios = [{"nombre": "SISTEMA", "estado": "OFFLINE"}]
+
         return {
             "nombre_cuartel": cuartel['nombre'], 
+            "personal": personal_str,
+            "carros": carros_limpios
+        }
+            
+    except Exception as e:
+        return {
+            "nombre_cuartel": cuartel['nombre'], 
+            "personal": "0",
             "carros": [{"nombre": "SISTEMA", "estado": "SIN CONEXIÓN"}]
         }
 
@@ -107,17 +110,16 @@ def tarea_actualizar_todo():
     global DATOS_EN_MEMORIA, ULTIMA_ACTUALIZACION, LOCK_ACTUALIZACION
     if LOCK_ACTUALIZACION: return
     LOCK_ACTUALIZACION = True
-    print("--- ⚡ ESCANEANDO... ---")
+    print("--- ⚡ ACTUALIZANDO DATOS EN LA NUBE ---")
     
     with ThreadPoolExecutor(max_workers=10) as executor:
         res = list(executor.map(obtener_token_y_datos, URLS_CUARTELES))
     
-    # Ordenar
     res.sort(key=lambda x: int(x['nombre_cuartel'].split()[0]) if x['nombre_cuartel'][0].isdigit() else 0)
     DATOS_EN_MEMORIA = res
     ULTIMA_ACTUALIZACION = time.time()
     LOCK_ACTUALIZACION = False
-    print("--- FIN ESCANEO ---")
+    print("--- DATOS LISTOS ---")
 
 @app.route('/api/carros')
 def api_carros():
