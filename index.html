@@ -137,12 +137,19 @@
         .nombre-carro { font-size: 1.5em; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
         .texto-estado { font-size: 0.65em; text-align: right; max-width: 100px; line-height: 1.1; opacity: 0.95; }
 
+        /* ESTILO NUEVO: FUERA DE SERVICIO (ROJO) */
         .sin-carros { 
-            color: #555; 
+            background-color: #c0392b; /* Rojo fuerte */
+            color: white; 
             text-align: center; 
+            font-weight: bold;
+            text-transform: uppercase;
+            padding: 10px;
+            border-radius: 6px;
             font-size: 0.9em; 
-            padding-top: 15px;
-            font-style: italic; 
+            margin-top: 5px;
+            letter-spacing: 1px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
         
         .loading { text-align: center; color: var(--naranja-bombero); grid-column: 1 / -1; margin-top: 50px; font-size: 1.5em;}
@@ -177,7 +184,7 @@
         // 2. CONEXIÓN A LA NUBE (RENDER)
         async function actualizarDatos() {
             try {
-                // Aquí está tu URL Real:
+                // TU URL REAL DE RENDER:
                 const respuesta = await fetch('https://monitoreo-central-cbs.onrender.com/api/carros');
                 const datos = await respuesta.json();
 
@@ -208,7 +215,8 @@
                                 </div>`;
                         });
                     } else {
-                        htmlCarros = '<div class="sin-carros">Sin unidades</div>';
+                        // AQUÍ ESTÁ EL CAMBIO A "FUERA DE SERVICIO"
+                        htmlCarros = '<div class="sin-carros">FUERA DE SERVICIO</div>';
                     }
 
                     pantalla.innerHTML += `
