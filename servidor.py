@@ -78,12 +78,12 @@ def obtener_token_y_datos(cuartel):
                         
                         estado_final = "EN SERVICIO"
                         if "LLAMADO" in estado_raw:
-                             if "DISPONIBLE" in estado_raw:
-                                 estado_final = "DISPONIBLE EN LLAMADO"
-                             else:
-                                 estado_final = "EN LLAMADO"
+                            if "DISPONIBLE" in estado_raw:
+                                estado_final = "DISPONIBLE EN LLAMADO"
+                            else:
+                                estado_final = "EN LLAMADO"
                         elif "FUERA" in estado_raw:
-                             continue 
+                            continue 
                         
                         carros_limpios.append({
                             "nombre": nombre,
@@ -91,7 +91,7 @@ def obtener_token_y_datos(cuartel):
                         })
 
         else:
-             carros_limpios = [{"nombre": "SISTEMA", "estado": "OFFLINE"}]
+            carros_limpios = [{"nombre": "SISTEMA", "estado": "OFFLINE"}]
 
         return {
             "nombre_cuartel": cuartel['nombre'], 
@@ -123,7 +123,8 @@ def tarea_actualizar_todo():
 
 @app.route('/api/carros')
 def api_carros():
-    if (time.time() - ULTIMA_ACTUALIZACION > 20) and not LOCK_ACTUALIZACION:
+    # AQUÍ ESTÁ EL CAMBIO: El caché ahora dura 5 segundos en lugar de 20
+    if (time.time() - ULTIMA_ACTUALIZACION > 5) and not LOCK_ACTUALIZACION:
         threading.Thread(target=tarea_actualizar_todo).start()
     return jsonify(DATOS_EN_MEMORIA or [])
 
