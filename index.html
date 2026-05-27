@@ -65,14 +65,14 @@
             border-bottom: 3px solid var(--highlight);
         }
 
-        /* VOLUNTARIOS GRANDES */
+        /* --- AQUÍ AGRANDÉ EL NÚMERO DE VOLUNTARIOS --- */
         .badge-personal {
             background-color: var(--azul-personal);
             color: white;
-            padding: 4px 10px;
+            padding: 4px 10px; /* Un poco más de relleno */
             border-radius: 12px;
-            font-size: 1.1em;
-            font-weight: bold;
+            font-size: 1.1em;  /* Antes era 0.8em. ¡Ahora es grande! */
+            font-weight: bold; /* Letra más gruesa */
             display: flex;
             align-items: center;
             gap: 6px;
@@ -101,12 +101,33 @@
             opacity: 0.95; 
         }
 
-        .sin-carros { 
+        .sin-carros {
             background-color: #c0392b; color: white; text-align: center; font-weight: bold;
-            text-transform: uppercase; padding: 10px; border-radius: 6px; font-size: 0.9em; 
+            text-transform: uppercase; padding: 10px; border-radius: 6px; font-size: 0.9em;
             margin-top: 5px; letter-spacing: 1px; box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
-        
+
+        .seccion-reemplazos {
+            border-top: 1px dashed #444;
+            margin-top: 4px;
+            padding-top: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .label-reemplazos {
+            font-size: 0.65em;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .carro-reemplazo {
+            background: linear-gradient(135deg, #5b2c6f 0%, #7d3c98 100%);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
         .loading { text-align: center; color: #e67e22; grid-column: 1 / -1; margin-top: 50px; font-size: 1.5em;}
     </style>
 </head>
@@ -117,7 +138,7 @@
     </header>
 
     <div id="pantalla" class="contenedor">
-        <div class="loading">Conectando con Servidor Cloud...</div>
+        <div class="loading">Iniciando Monitor Local...</div>
     </div>
 
     <script>
@@ -132,8 +153,8 @@
 
         async function actualizarDatos() {
             try {
-                // ⚠️ CONEXIÓN REAL A LA NUBE (Render) ⚠️
-                const respuesta = await fetch('https://monitoreo-central-cbs.onrender.com/api/carros');
+                // ⚠️ SIGUE EN MODO LOCAL (127.0.0.1)
+                const respuesta = await fetch('http://127.0.0.1:5000/api/carros');
                 const datos = await respuesta.json();
 
                 if (datos.length === 0) return;
@@ -148,7 +169,7 @@
                             if (carro.estado === 'EN LLAMADO') claseColor = 'estado-naranja';
                             else if (carro.estado === 'OFFLINE' || carro.estado === 'SIN CONEXIÓN') claseColor = 'estado-offline';
                             
-                            // GUIÓN INTELIGENTE (B2 -> B-2)
+                            // TRUCO DEL GUIÓN: B2 -> B-2
                             let nombreLimpio = carro.nombre.replace(/([a-zA-Z])(\d)/, '$1-$2');
 
                             htmlCarros += `<div class="carro ${claseColor}">
@@ -160,6 +181,23 @@
                         htmlCarros = '<div class="sin-carros">FUERA DE SERVICIO</div>';
                     }
 
+                    let htmlReemplazos = '';
+                    if (cuartel.reemplazos && cuartel.reemplazos.length > 0) {
+                        const items = cuartel.reemplazos.map(nombre => {
+                            const nombreLimpio = nombre
+                                .replace(/\(R\)/gi, '').trim()
+                                .replace(/([a-zA-Z])(\d)/, '$1-$2');
+                            return `<div class="carro carro-reemplazo">
+                                <span class="nombre-carro">${nombreLimpio}</span>
+                                <span class="texto-estado">DISPONIBLE</span>
+                            </div>`;
+                        }).join('');
+                        htmlReemplazos = `<div class="seccion-reemplazos">
+                            <div class="label-reemplazos">Reemplazos</div>
+                            ${items}
+                        </div>`;
+                    }
+
                     pantalla.innerHTML += `
                         <div class="tarjeta">
                             <div class="cabecera-tarjeta">
@@ -168,7 +206,7 @@
                                     ${cuartel.personal || '0'} 👨‍🚒
                                 </span>
                             </div>
-                            <div class="cuerpo-tarjeta">${htmlCarros}</div>
+                            <div class="cuerpo-tarjeta">${htmlCarros}${htmlReemplazos}</div>
                         </div>
                     `;
                 });
